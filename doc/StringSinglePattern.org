@@ -1,0 +1,254 @@
+## 0x00 引言
+
+> 文本处理作为计算机基本功能之一，在计算机中是和计算处于同样重要的地位。字符串匹配是文本处理中最基本的功能，也是大家最常使用的功能。关于字符串匹配输入部分只有两个基本成分：原字符串和模式，首次匹配成功的首字母次出现的位置就是输出。下面将介绍一些字符串匹配算法，并给出 Python 实现。简单的字符匹配为什么会存在不同的算法？其实这些算法的主要区别是在匹配过程中移位的策略不同。
+
+## 0x01 问题描述
+
+Input：原字符串，模式
+Output：首次匹配成功的首字母的位置
+
+## 0x02 Brute Force
+该方法就是暴力破解，搞过安全的会遇到各种暴力破解。
+
+```Python 
+
+class StringSinglePattern(object):
+    def __init__(self, base_str, p):
+        self.base_str = base_str              # 原字符串
+        self.p = p                            # 模式（pattern）
+        self.p_len = len(p)
+        self.base_str_len = len(base_str)
+        self.pi = [0 for i in range(self.p_len)]
+
+    def set_pattern(self, p):
+        self.p = p
+        self.p_len = len(p)
+
+    def set_base_str(self, base_str):
+        self.base_str = base_str
+        self.base_str_len = len(base_str)
+
+    '''Brute Force'''
+
+    def brute_force(self):
+        p = 0
+        b = 0
+        if self.p_len > self.base_str_len:
+            return 0
+        while b <= self.base_str_len:        # can't use for
+            if self.base_str[b] == self.p[p]:
+                b += 1
+                p += 1
+            else:
+                b = b - p + 1
+                p = 0
+            if p == self.p_len:
+                return b - p
+        return 0
+
+```
+
+## 0x03 KMP
+该算法中的 K 是计算机中的一位大牛，感觉计算机界有“四大天王”你应该认识：Knuth，Dijkstra，Church，Turing。
+
+KMP 算法相对与 Brute Force 来说不是移动一位。
+前缀函数
+
+```Python
+
+class StringSinglePattern(object):
+    def __init__(self, base_str, p):
+        self.base_str = base_str              # 原字符串
+        self.p = p                            # 模式（pattern）
+        self.p_len = len(p)
+        self.base_str_len = len(base_str)
+        self.pi = [0 for i in range(self.p_len)]
+
+    def set_pattern(self, p):
+        self.p = p
+        self.p_len = len(p)
+
+    def set_base_str(self, base_str):
+        self.base_str = base_str
+        self.base_str_len = len(base_str)
+
+    def __kmp_partial_match_table__(self):
+        k = 0
+        q = 1
+        while q < self.p_len:
+            while (k > 0) and (self.p[k] != self.p[q]):
+                k = self.pi[k - 1]
+            if self.p[k] == self.p[q]:
+                k = k + 1
+            self.pi[q] = k
+            q = q + 1
+        return 0
+
+    def kmp(self):
+        self.__kmp_partial_match_table__()
+        print(self.pi)                # next table
+        pi_len = len(self.pi)
+        k = 0
+        for q in range(self.base_str_len):
+            while (k > 0) and (self.p[k] != self.base_str[q]):
+                k = self.pi[k - 1]
+            if self.p[k] == self.base_str[q]:
+               k = k + 1
+            if k == pi_len:
+                return q - pi_len + 1
+        return 0
+
+```
+
+## 0x04 Boyer Moore
+BM 算法相对 KMP 来说移动了更多的位置。
+
+坏字符移动规则：
+
+好后缀移动规则：
+
+坏字符，好后缀，两种移位中的最大值，从右到左，
+
+```Python
+
+class StringSinglePattern(object):
+    def __init__(self, base_str, p):
+        self.base_str = base_str              # 原字符串
+        self.p = p                            # 模式（pattern）
+        self.p_len = len(p)
+        self.base_str_len = len(base_str)
+        self.pi = [0 for i in range(self.p_len)]
+
+    def set_pattern(self, p):
+        self.p = p
+        self.p_len = len(p)
+
+    def set_base_str(self, base_str):
+        self.base_str = base_str
+        self.base_str_len = len(base_str)
+
+    def __calc_match__(self, num):
+        k = num
+        j = 0
+        while k >= 0:
+            if self.p[-k] == self.p[j]:
+                k = k - 1
+                j = j + 1
+                if k <= 0:
+                    self.pi[num - 1] = num
+                    return 0
+            else:
+                if num == 1:
+                    return 0
+                self.pi[num - 1] = self.pi[num - 2]
+                return 0
+
+    def __init_good_table__(self):
+        i = 1
+        while i <= self.p_len:
+            self.__calc_match__(i)
+            i = i + 1
+        print(self.pi)
+        return 0
+
+    def __check_bad_table__(self, tmp_base_str):
+        i = 1
+        while self.p_len - i >= 0:
+            if self.p[-i] == tmp_base_str:
+                return i
+            else:
+                i = i + 1
+        return self.p_len + 1
+
+    def __check_good_table__(self, num):
+        if not num:
+            return self.p_len
+        else:
+            return self.pi[num]
+
+    def bm(self):
+        self.__init_good_table__()
+        tmp_len = self.p_len
+        i = 1
+        while tmp_len <= len(self.base_str):
+            if self.p[-i] == self.base_str[tmp_len - i]:
+                i = i + 1
+                if i > self.p_len:
+                    return tmp_len - self.p_len
+            else:
+                tmp_bad = self.__check_bad_table__(self.base_str[tmp_len - i]) - i
+                tmp_good = self.p_len - self.__check_good_table__(i - 1)
+                tmp_len = tmp_len + max(tmp_bad, tmp_good)
+                print(tmp_bad, tmp_good, tmp_len)
+                i = 1
+        return 0
+
+```
+## 0x05 Sunday
+一次性能验证的串越长，算法的效率越高，Sunday 算法的跨度比BM算法更大，直接从模式串最后一位K开始验证。
+
+```Python
+
+class StringSinglePattern(object):
+    def __init__(self, base_str, p):
+        self.base_str = base_str              # 原字符串
+        self.p = p                            # 模式（pattern）
+        self.p_len = len(p)
+        self.base_str_len = len(base_str)
+        self.pi = [0 for i in range(self.p_len)]
+
+    def set_pattern(self, p):
+        self.p = p
+        self.p_len = len(p)
+
+    def set_base_str(self, base_str):
+        self.base_str = base_str
+        self.base_str_len = len(base_str)
+
+    def __check_bad_shift__(self, p):
+        i = 0
+        while i < self.p_len:
+            if self.p[i] == p:
+                return i
+            else:
+                i = i + 1
+        return -1
+
+    def sunday(self):
+        tmp_len = 0
+        tmp_hop = self.p_len
+        i = 0
+        while tmp_hop <= len(self.base_str):
+            if self.p[i] == self.base_str[tmp_len + i]:
+                i = i + 1
+                if i == self.p_len:
+                    return tmp_len
+            else:
+                tmp_len = tmp_len + self.p_len - self.__check_bad_shift__(self.base_str[tmp_hop])
+                tmp_hop = tmp_len + self.p_len
+                i = 0
+        return 0
+
+```
+
+## 0x06 Robin-Karp
+Hash怎么可以在这种匹配场合不出现勒？
+
+```Python
+Waitting
+```
+## 0x07 Bitap
+
+```Python
+Waitting
+```
+
+## 0x08 End
+
+学过很多，却一直没有试着去记录那些轨迹，现在准备找工作了，花点时间记录一点点吧。
+
+看到字符串匹配算法，我就想到很多字符串处理工具：grep，sed，awk，ag，pt，Search Everything。
+
+学会这几个小程序有很大的作用，所谓一花一世界。
+
+
